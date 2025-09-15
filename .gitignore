@@ -1,0 +1,23 @@
+# ROS 2 build artifacts
+build/
+install/
+log/
+
+# Python virtual environment
+venv/
+
+# RPLIDAR SDK build files (if any)
+rplidar_sdk/build/
+rplidar_sdk/bin/
+rplidar_sdk/lib/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+
