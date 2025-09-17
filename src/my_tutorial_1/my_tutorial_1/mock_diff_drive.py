@@ -37,8 +37,8 @@ class MockDiffDrive(Node):
         self.create_timer(0.05, self.update_pose)
 
     def cmd_vel_callback(self, msg: Twist):
-        self.vx = msg.linear.x
-        self.vy = msg.linear.y
+        self.vx = msg.linear.y
+        self.vy = -msg.linear.x
         self.vth = msg.angular.z
 
     def update_pose(self):

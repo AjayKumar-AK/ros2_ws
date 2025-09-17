@@ -25,7 +25,8 @@ setup(
     entry_points={
         'console_scripts': [
                             'mock_diff_drive = my_tutorial_1.mock_diff_drive:main',
-                            'sensor_bridge = my_tutorial_1.sensor_bridge:main'
+                            'sensor_bridge = my_tutorial_1.sensor_bridge:main',
+                            'python_serial_bridge = mark3_serial_bridge.python_serial_bridge:main'
         ],
     },
 )

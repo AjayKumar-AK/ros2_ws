@@ -8,10 +8,11 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from ament_index_python.packages import get_package_share_directory
 
+
 def generate_launch_description():
     
     # Path to your URDF file
-    urdf_file_path = '/home/ajay/ros2_ws/src/my_tutorial_1/urdf/myrobo.urdf'
+    urdf_file_path = '/home/ajay/ros2_ws/src/my_tutorial_1/urdf/myrobo1.urdf'
     
     # Read the URDF file
     with open(urdf_file_path, 'r') as urdf_file:
@@ -29,7 +30,12 @@ def generate_launch_description():
     if not os.path.exists(rviz_config_file):
         # Create a temporary config file path - RViz will use default if not found
         rviz_config_file = ''
-    
+        
+    ekf_config = os.path.join(
+        get_package_share_directory('my_tutorial_1'),
+        'config',
+        'ekf.yaml'
+    )
     return LaunchDescription([
         
         # Robot State Publisher - publishes robot transforms from URDF
@@ -56,16 +62,27 @@ def generate_launch_description():
         ),
         
         # RViz Node with custom config
-        Node(
-            package='rviz2',
-            executable='rviz2',
-            name='rviz2',
-            output='screen',
-            arguments=['-d', rviz_config_file] if rviz_config_file else [],
-            parameters=[{
-                'use_sim_time': False
-            }],
+        #Node(
+         #   package='rviz2',
+          #  executable='rviz2',
+           # name='rviz2',
+            #output='screen',
+            #arguments=['-d', rviz_config_file] if rviz_config_file else [],
+            #parameters=[{
+             #   'use_sim_time': False
+            #}],
             # Set initial RViz configuration via parameters
-            remappings=[]
+            #remappings=[]
+        #) ,
+        
+        
+        
+        Node(
+            package='robot_localization',
+            executable='ekf_node',
+            name='ekf_filter_node',
+            output='screen',
+            parameters=['/home/ajay/ros2_ws/src/my_tutorial_1/config/ekf.yaml']
+            
         )
     ])

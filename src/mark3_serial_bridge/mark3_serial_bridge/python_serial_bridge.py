@@ -1,71 +1,4 @@
-'''#!/usr/bin/env python3
-import rclpy
 
-from rclpy.node import Node
-
-from geometry_msgs.msg import Twist
-
-import serial
-
-
-
-class SerialBridge(Node):
-
-    def __init__(self):
-
-        super().__init__('serial_bridge')
-
-        self.subscription = self.create_subscription(
-
-            Twist,
-
-            '/cmd_vel',
-
-            self.listener_callback,
-
-            10)
-
-        self.ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)  # Replace with your port
-
-        self.get_logger().info("Serial Bridge Node Started")
-
-
-
-    def listener_callback(self, msg):
-
-        vx = msg.linear.x * 100  # convert to cm/s or scale
-
-        vy = msg.linear.y * 100
-
-        omega = msg.angular.z * 100
-
-
-
-        command = f"{vx:.2f},{vy:.2f},{omega:.2f}\n"
-
-        self.ser.write(command.encode('utf-8'))
-
-        self.get_logger().info(f"Sent: {command.strip()}")
-
-
-
-def main(args=None):
-
-    rclpy.init(args=args)
-
-    bridge = SerialBridge()
-
-    rclpy.spin(bridge)
-
-    bridge.destroy_node()
-
-    rclpy.shutdown()
-
-
-
-if __name__ == '__main__':
-
-    main()'''
 
 
 #!/usr/bin/env python3
@@ -74,6 +7,8 @@ from rclpy.node import Node
 from sensor_msgs.msg import Imu
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
+from geometry_msgs.msg import Quaternion
 import serial
 import math
 import time
@@ -94,6 +29,7 @@ class SensorBridge(Node):
                  publish_rate_hz=50.0):
         super().__init__('sensor_bridge')
         self.imu_pub = self.create_publisher(Imu, 'imu/data', 10)
+        self.odom_pub = self.create_publisher(Odometry, 'wheel/odom', 10)
         
         self.subscription = self.create_subscription(Twist, '/cmd_vel', self.listener_callback, 10)
 
@@ -158,6 +94,7 @@ class SensorBridge(Node):
         dt = now - self.prev_time
         if dt <= 0:
             return
+        
 
         # ---------------- IMU ----------------
         imu_msg = Imu()
@@ -204,6 +141,25 @@ class SensorBridge(Node):
         self.x += dx
         self.y += dy
         self.yaw += d_yaw
+        # at end of timer_callback
+        odom = Odometry()
+        odom.header.stamp = self.get_clock().now().to_msg()
+        odom.header.frame_id = "odom"
+        odom.child_frame_id = "base_footprint"
+
+        odom.pose.pose.position.x = self.x
+        odom.pose.pose.position.y = self.y
+        odom.pose.pose.orientation.z = math.sin(self.yaw * 0.5)
+        odom.pose.pose.orientation.w = math.cos(self.yaw * 0.5)
+        odom.pose.pose.orientation.x = 0.0
+        odom.pose.pose.orientation.y = 0.0
+        
+
+        odom.twist.twist.linear.x = vx
+        odom.twist.twist.linear.y = vy
+        odom.twist.twist.angular.z = omega
+
+        self.odom_pub.publish(odom)
 
     
 

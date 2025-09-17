@@ -9,6 +9,7 @@ from launch_ros.parameter_descriptions import ParameterValue
 def generate_launch_description():
     pkg_share = FindPackageShare(package='my_tutorial_1').find('my_tutorial_1')
     urdf_file = os.path.join(pkg_share, 'urdf', 'myrobo.urdf')
+    
 
     return LaunchDescription([
         Node(
@@ -20,7 +21,7 @@ def generate_launch_description():
             package='robot_state_publisher',
             executable='robot_state_publisher',
             name='robot_state_publisher',
-            parameters=[{'robot_description': ParameterValue(Command(['cat ' , urdf_file]), value_type=str)}]
+            parameters=[{'robot_description': ParameterValue(Command(['cat ' , ]), value_type=str)}]
         ),
         Node(
             package='rviz2',

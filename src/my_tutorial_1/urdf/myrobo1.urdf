@@ -1,27 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <robot name="mark3">
 
-  <!-- Base footprint: ground projection of robot center -->
-  <link name="base_footprint" />
+  <!-- Ground projection -->
+  <link name="base_footprint"/>
 
+  <!-- base_footprint -> base_link (fixed). base_link contains the chassis geometry/inertia from your original Chassis_Fixed -->
   <joint name="base_footprint_to_base_link" type="fixed">
     <origin xyz="0 0 0" rpy="0 0 0"/>
     <parent link="base_footprint"/>
     <child link="base_link"/>
   </joint>
 
-  <!-- Base link -->
-  <link name="base_link" />
-
-  <!-- Joint connecting base_link to chassis -->
-  <joint name="base_to_chassis" type="fixed">
-    <origin xyz="0 0 0" rpy="0 0 0"/>
-    <parent link="base_link"/>
-    <child link="Chassis_Fixed"/>
-  </joint>
-
-  <!-- Chassis -->
-  <link name="Chassis_Fixed">
+  <!-- Main robot body (chassis) - moved contents from original Chassis_Fixed -->
+  <link name="base_link">
     <inertial>
       <origin xyz="-3.48301383216647E-05 -0.00597816527961164 0.00219929418505431" rpy="0 0 0" />
       <mass value="0.676138467755629" />
@@ -46,7 +37,7 @@
   </link>
 
   <!-- Right Front Wheel -->
-  <link name="Right_Front">
+  <link name="right_front_wheel">
     <inertial>
       <origin xyz="0.030871 -5.2966E-07 -6.4935E-07" rpy="0 0 0" />
       <mass value="0.18351" />
@@ -67,15 +58,16 @@
       </geometry>
     </collision>
   </link>
-  <joint name="Wheel_1" type="continuous">
+
+  <joint name="wheel_right_front_joint" type="continuous">
     <origin xyz="-0.083 -0.07999 -0.030593" rpy="1.5954 0 3.1416" />
-    <parent link="Chassis_Fixed" />
-    <child link="Right_Front" />
-    <axis xyz="-1 0 0" />
+    <parent link="base_link" />
+    <child link="right_front_wheel" />
+    <axis xyz="1 0 0" />
   </joint>
 
   <!-- Right Back Wheel -->
-  <link name="Right_Back">
+  <link name="right_back_wheel">
     <inertial>
       <origin xyz="0.031039 0.00014756 -0.00086934" rpy="0 0 0" />
       <mass value="0.22653" />
@@ -96,15 +88,16 @@
       </geometry>
     </collision>
   </link>
-  <joint name="Wheel_2" type="continuous">
+
+  <joint name="wheel_right_back_joint" type="continuous">
     <origin xyz="-0.083 0.078467 -0.03183" rpy="0.17453 0 -3.1416" />
-    <parent link="Chassis_Fixed" />
-    <child link="Right_Back" />
-    <axis xyz="-1 0 0" />
+    <parent link="base_link" />
+    <child link="right_back_wheel" />
+    <axis xyz="1 0 0" />
   </joint>
 
   <!-- Left Back Wheel -->
-  <link name="Left_Back">
+  <link name="left_back_wheel">
     <inertial>
       <origin xyz="0.030872 -5.2898E-07 -6.4966E-07" rpy="0 0 0" />
       <mass value="0.18351" />
@@ -125,15 +118,16 @@
       </geometry>
     </collision>
   </link>
-  <joint name="Wheel_3" type="continuous">
+
+  <joint name="wheel_left_back_joint" type="continuous">
     <origin xyz="0.083 0.078467 -0.03183" rpy="2.9916 0 0" />
-    <parent link="Chassis_Fixed" />
-    <child link="Left_Back" />
+    <parent link="base_link" />
+    <child link="left_back_wheel" />
     <axis xyz="1 0 0" />
   </joint>
 
   <!-- Left Front Wheel -->
-  <link name="Left_Front">
+  <link name="left_front_wheel">
     <inertial>
       <origin xyz="0.031039 0.00014756 -0.00086934" rpy="0 0 0" />
       <mass value="0.22653" />
@@ -154,11 +148,34 @@
       </geometry>
     </collision>
   </link>
-  <joint name="Wheel_4" type="continuous">
+
+  <joint name="wheel_left_front_joint" type="continuous">
     <origin xyz="0.083 -0.07999 -0.030593" rpy="1.2993 0 0" />
-    <parent link="Chassis_Fixed" />
-    <child link="Left_Front" />
+    <parent link="base_link" />
+    <child link="left_front_wheel" />
     <axis xyz="1 0 0" />
+  </joint>
+
+  <!-- Placeholder sensor links (locations to be defined later) -->
+  <link name="lidar_link"/>
+  <joint name="lidar_mount" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+  </joint>
+
+  <link name="camera_link"/>
+  <joint name="camera_mount" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+  </joint>
+
+  <link name="imu_link"/>
+  <joint name="imu_mount" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="imu_link"/>
   </joint>
 
 </robot>
