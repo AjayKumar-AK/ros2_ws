@@ -1,196 +1,3 @@
-
-
-
-'''#!/usr/bin/env python3
-import rclpy
-from rclpy.node import Node
-from sensor_msgs.msg import Imu
-from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Twist
-from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Quaternion
-import serial
-import math
-import time
-
-def yaw_to_quat(yaw):
-    qz = math.sin(yaw * 0.5)
-    qw = math.cos(yaw * 0.5)
-    return (0.0, 0.0, qz, qw)
-
-class SensorBridge(Node):
-    def __init__(self,
-                 port='/dev/ttyUSB0',
-                 baud=115200,
-                 ticks_per_rev=975.0,
-                 wheel_radius=0.05,
-                 wheel_base=0.25,
-                 track_width=0.20,
-                 publish_rate_hz=50.0):
-        super().__init__('sensor_bridge')
-        self.imu_pub = self.create_publisher(Imu, 'imu/data', 10)
-        self.odom_pub = self.create_publisher(Odometry, 'wheel/odom', 10)
-        
-        self.subscription = self.create_subscription(Twist, '/cmd_vel', self.listener_callback, 10)
-
-        self.ser = serial.Serial(port, baud, timeout=1)
-        self.get_logger().info(f"Opened serial {port} @ {baud}")
-
-        # encoder params
-        self.ticks_per_rev = float(ticks_per_rev)
-        self.r = float(wheel_radius)
-        # use half distances for L and W in formulas
-        self.L = float(wheel_base) / 2.0
-        self.W = float(track_width) / 2.0
-
-        # storage for previous encoder readings
-        self.prev_ticks = [0.0, 0.0, 0.0, 0.0]
-        self.prev_time = time.time()
-
-        # pose state
-        self.x = 0.0
-        self.y = 0.0
-        self.yaw = 0.0
-
-        self.timer = self.create_timer(1.0 / publish_rate_hz, self.timer_callback)
-
-    def listener_callback(self, msg):
-
-        vx = msg.linear.x   # convert to cm/s or scale
-
-        vy = msg.linear.y 
-        omega = msg.angular.z 
-
-
-
-        command = f"{vx:.2f},{vy:.2f},{omega:.2f}\n"
-
-        self.ser.write(command.encode('utf-8'))
-
-        self.get_logger().info(f"Sent: {command.strip()}")
-        
-    def timer_callback(self):
-        line = self.ser.readline().decode('utf-8', errors='ignore').strip()
-        if not line:
-            return
-
-        # expect 10 comma-separated values
-        parts = line.split(',')
-        
-        if len(parts) < 11 and parts[0] !="S":
-            self.get_logger().warn("Bad serial line (expected 10 values): " + line)
-            return
-
-        try:
-            gx, gy, gz, ax, ay, az, e1, e2, e3, e4 = map(float, parts[1:])
-            #self.get_logger().warn("Parse error here: " + vale)
-        except ValueError:
-            self.get_logger().warn("Parse error: " + line)
-            return
-        
-        self.get_logger().info(f"values are {gx}, {gy}, {gz}, {ax}, {ay}, {az}, {e1}, {e2}, {e3}, {e4} ")
-
-        now = time.time()
-        dt = now - self.prev_time
-        if dt <= 0:
-            return
-        
-
-        # ---------------- IMU ----------------
-        imu_msg = Imu()
-        imu_msg.header.stamp = self.get_clock().now().to_msg()
-        imu_msg.header.frame_id = "imu_link"
-
-        # Arduino sends gyro in deg/s → convert to rad/s here
-        imu_msg.angular_velocity.x = math.radians(gx)
-        imu_msg.angular_velocity.y = math.radians(gy)
-        imu_msg.angular_velocity.z = math.radians(gz)
-
-        # accel already in m/s^2 (as you said)
-        imu_msg.linear_acceleration.x = ax
-        imu_msg.linear_acceleration.y = ay
-        imu_msg.linear_acceleration.z = az
-
-        imu_msg.orientation_covariance[0] = -1.0  # no orientation
-
-        self.imu_pub.publish(imu_msg)
-
-        # ---------------- Encoders -> wheel speeds ----------------
-        ticks = [e1, e2, e3, e4]
-        # compute delta ticks
-        delta = [ticks[i] - self.prev_ticks[i] for i in range(4)]
-
-        # wheel angular velocities (rad/s): (delta_ticks / ticks_per_rev) * 2π / dt
-        omega_w = [(delta[i] / self.ticks_per_rev) * (2.0 * math.pi) / dt for i in range(4)]
-
-        # wheel linear velocities (m/s)
-        v_w = [omega_w[i] * self.r for i in range(4)]
-        # wheel order: assume e1=FL, e2=FR, e3=RL, e4=RR (match your Arduino)
-        v_FL, v_FR, v_RL, v_RR = v_w
-
-        # ---------------- Mecanum inverse kinematics ----------------
-        vx = (v_FL + v_FR + v_RL + v_RR) / 4.0
-        vy = (-v_FL + v_FR + v_RL - v_RR) / 4.0
-        omega = (-v_FL + v_FR - v_RL + v_RR) / 4.0 * (self.L + self.W)
-
-        # integrate pose (body -> world)
-        dx = (vx * math.cos(self.yaw) - vy * math.sin(self.yaw)) * dt
-        dy = (vx * math.sin(self.yaw) + vy * math.cos(self.yaw)) * dt
-        d_yaw = omega * dt
-
-        self.x += dx
-        self.y += dy
-        self.yaw += d_yaw
-        # at end of timer_callback
-        odom = Odometry()
-        odom.header.stamp = current_time.to_msg()
-        odom.header.frame_id = "odom"
-
-        odom.pose.pose.position.x = self.x
-        odom.pose.pose.position.y = self.y
-        odom.pose.pose.orientation.z = math.sin(self.th / 2.0)
-        odom.pose.pose.orientation.w = math.cos(self.th / 2.0)
-
-        odom.child_frame_id = "base_link"
-        odom.twist.twist = Twist()
-        odom.twist.twist.linear.x = self.vx
-        odom.twist.twist.linear.y = self.vy
-        odom.twist.twist.angular.z = self.vth
-
-        self.odom_pub.publish(odom)
-        t = TransformStamped()
-        t.header.stamp = current_time.to_msg()
-        t.header.frame_id = "odom"
-        t.child_frame_id = "base_link"
-        t.transform.translation.x = self.x
-        t.transform.translation.y = self.y
-        t.transform.translation.z = 0.0
-        q = tf_transformations.quaternion_from_euler(0, 0, self.th)
-        t.transform.rotation.x = q[0]
-        t.transform.rotation.y = q[1]
-        t.transform.rotation.z = q[2]
-        t.transform.rotation.w = q[3]
-        self.tf_broadcaster.sendTransform(t)
-
-    
-
-
-def main(args=None):
-    rclpy.init(args=args)
-    node = SensorBridge(port='/dev/ttyUSB0', baud=115200,
-                        ticks_per_rev=975.0, wheel_radius=0.05,
-                        wheel_base=0.25, track_width=0.20,
-                        publish_rate_hz=50.0)
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
-    node.destroy_node()
-    rclpy.shutdown()
-
-if __name__ == '__main__':
-    main()'''
-    
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
@@ -205,77 +12,78 @@ import serial
 import math
 import time
 
-
 class SensorBridge(Node):
     def __init__(self,
                  port='/dev/ttyUSB0',
                  baud=115200,
-                 ticks_per_rev=975.0,
-                 wheel_radius=0.05,
-                 wheel_base=0.25,
-                 track_width=0.20,
+                 ticks_per_rev=490.0,  # Corrected CPR
+                 wheel_radius=0.047,
+                 wheel_base=0.164,
+                 track_width=0.22,
                  publish_rate_hz=50.0):
         super().__init__('sensor_bridge')
-
-        # ---------------- Publishers ----------------
         self.imu_pub = self.create_publisher(Imu, 'imu/data', 10)
         self.odom_pub = self.create_publisher(Odometry, 'wheel/odom', 10)
-
-        # ---------------- Subscriber ----------------
         self.subscription = self.create_subscription(Twist, '/cmd_vel', self.listener_callback, 10)
-
-        # ---------------- Serial ----------------
         self.ser = serial.Serial(port, baud, timeout=1)
         self.get_logger().info(f"Opened serial {port} @ {baud}")
-
-        # ---------------- Encoder/Wheel Parameters ----------------
         self.ticks_per_rev = float(ticks_per_rev)
         self.r = float(wheel_radius)
         self.L = float(wheel_base) / 2.0
         self.W = float(track_width) / 2.0
-
-        # ---------------- State ----------------
         self.prev_ticks = [0.0, 0.0, 0.0, 0.0]
         self.prev_time = time.time()
-
         self.x = 0.0
         self.y = 0.0
         self.yaw = 0.0
-
         self.vx = 0.0
         self.vy = 0.0
         self.vth = 0.0
-
-        # ---------------- TF Broadcaster ----------------
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
-
-        # ---------------- Timer ----------------
         self.timer = self.create_timer(1.0 / publish_rate_hz, self.timer_callback)
+        self.last_valid_sensor_time = time.time()
+        self.debug_counter = 0
 
-    # ---------------- Callback for /cmd_vel ----------------
     def listener_callback(self, msg):
-        vx = msg.linear.x
-        vy = msg.linear.y
+        # Fix coordinate frame mismatch as you discovered
+        vx = msg.linear.x      # Swap X and Y
+        vy = msg.linear.y     # Negate the new Y
         omega = msg.angular.z
         command = f"{vx:.2f},{vy:.2f},{omega:.2f}\n"
         self.ser.write(command.encode('utf-8'))
-        self.get_logger().info(f"Sent cmd_vel: {command.strip()}")
+        self.get_logger().info(f"Sent cmd_vel (corrected): vx={vx:.2f}, vy={vy:.2f}, omega={omega:.2f}")
 
-    # ---------------- Timer callback: read sensors, compute odom ----------------
     def timer_callback(self):
         line = self.ser.readline().decode('utf-8', errors='ignore').strip()
+        
+        # Debug: Log every 10th iteration what we're receiving
+        self.debug_counter += 1
+        if self.debug_counter % 10 == 0:
+            self.get_logger().info(f"Raw serial line: '{line}'")
+        
         if not line:
+            if time.time() - self.last_valid_sensor_time > 2.0:
+                self.get_logger().warn("No serial data received for 2 seconds!")
             return
-
+            
+        # Check if this is an expected sensor data line
+        if not line.startswith('S'):
+            if line.startswith('[') or line.startswith('DEBUG'):
+                self.get_logger().warn(f"Arduino sending debug instead of sensor data: {line}")
+            else:
+                self.get_logger().warn(f"Unexpected serial format: {line}")
+            return
+            
         parts = line.split(',')
-        if len(parts) < 11 or parts[0] != "S":
-            self.get_logger().warn("Bad serial line: " + line)
+        if len(parts) != 11:  # S + 10 sensor values
+            self.get_logger().warn(f"Wrong number of parts ({len(parts)}): {line}")
             return
-
+            
         try:
             gx, gy, gz, ax, ay, az, e1, e2, e3, e4 = map(float, parts[1:])
-        except ValueError:
-            self.get_logger().warn("Parse error: " + line)
+            self.last_valid_sensor_time = time.time()
+        except ValueError as e:
+            self.get_logger().warn(f"Parse error: {line} - {e}")
             return
 
         now = time.time()
@@ -284,65 +92,109 @@ class SensorBridge(Node):
             return
         self.prev_time = now
 
-        # ---------------- Publish IMU ----------------
+        # Debug: Log sensor values occasionally
+        if self.debug_counter % 50 == 0:
+            self.get_logger().info(f"Sensors - IMU: gx={gx:.2f}, gy={gy:.2f}, gz={gz:.2f}, ax={ax:.2f}, ay={ay:.2f}, az={az:.2f}")
+            self.get_logger().info(f"Encoders: e1={e1}, e2={e2}, e3={e3}, e4={e4}")
+
+        # Publish IMU with corrections for upside-down orientation
         imu_msg = Imu()
         imu_msg.header.stamp = self.get_clock().now().to_msg()
         imu_msg.header.frame_id = "imu_link"
-        imu_msg.angular_velocity.x = math.radians(gx)
-        imu_msg.angular_velocity.y = math.radians(gy)
-        imu_msg.angular_velocity.z = math.radians(gz)
-        imu_msg.linear_acceleration.x = ax
-        imu_msg.linear_acceleration.y = ay
-        imu_msg.linear_acceleration.z = az
-        imu_msg.orientation_covariance[0] = -1.0  # orientation not provided
+        
+        # Correct for upside-down IMU (flip Z-axis, keep X,Y)
+        imu_msg.angular_velocity.x = gx      # Assuming X is correct
+        imu_msg.angular_velocity.y = gy      # Assuming Y is correct  
+        imu_msg.angular_velocity.z = -gz     # Flip Z for upside-down IMU
+        
+        imu_msg.linear_acceleration.x = ax   # Assuming X is correct
+        imu_msg.linear_acceleration.y = ay   # Assuming Y is correct
+        imu_msg.linear_acceleration.z = -az  # Flip Z - gravity should read +9.81 when upside down
+        
+        imu_msg.orientation_covariance[0] = -1.0  # No orientation data
+        imu_msg.angular_velocity_covariance = [0.0001, 0.0, 0.0, 0.0, 0.0001, 0.0, 0.0, 0.0, 0.0001]
+        imu_msg.linear_acceleration_covariance = [0.01, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.01]
+        
         self.imu_pub.publish(imu_msg)
 
-        # ---------------- Encoder -> Wheel Velocities ----------------
+        # Encoder -> Wheel Velocities
         ticks = [e1, e2, e3, e4]
         delta_ticks = [ticks[i] - self.prev_ticks[i] for i in range(4)]
+        
+        # Debug: Log encoder changes
+        if any(abs(dt) > 0.1 for dt in delta_ticks):
+            self.get_logger().info(f"Encoder deltas: {delta_ticks}")
+        
         self.prev_ticks = ticks
 
         omega_w = [(delta_ticks[i] / self.ticks_per_rev) * (2.0 * math.pi) / dt for i in range(4)]
         v_w = [omega_w[i] * self.r for i in range(4)]
         v_FL, v_FR, v_RL, v_RR = v_w
 
-        # ---------------- Mecanum Inverse Kinematics ----------------
+        # Debug: Log calculated velocities
+        if any(abs(v) > 0.01 for v in v_w):
+            self.get_logger().info(f"Wheel velocities: FL={v_FL:.3f}, FR={v_FR:.3f}, RL={v_RL:.3f}, RR={v_RR:.3f}")
+
+        # Mecanum Inverse Kinematics
+        old_vx, old_vy, old_vth = self.vx, self.vy, self.vth
         self.vx = (v_FL + v_FR + v_RL + v_RR) / 4.0
         self.vy = (-v_FL + v_FR + v_RL - v_RR) / 4.0
         self.vth = (-v_FL + v_FR - v_RL + v_RR) / (4.0 * (self.L + self.W))
 
-        # ---------------- Integrate Pose ----------------
+        # Debug: Log body velocities when they change significantly
+        if abs(self.vx - old_vx) > 0.01 or abs(self.vy - old_vy) > 0.01 or abs(self.vth - old_vth) > 0.01:
+            self.get_logger().info(f"Body velocities: vx={self.vx:.3f}, vy={self.vy:.3f}, vth={self.vth:.3f}")
+
+        # Integrate Pose
         dx = (self.vx * math.cos(self.yaw) - self.vy * math.sin(self.yaw)) * dt
         dy = (self.vx * math.sin(self.yaw) + self.vy * math.cos(self.yaw)) * dt
         d_yaw = self.vth * dt
+        
+        old_x, old_y, old_yaw = self.x, self.y, self.yaw
         self.x += dx
         self.y += dy
         self.yaw += d_yaw
 
-        # ---------------- Publish Odometry ----------------
+        # Debug: Log pose changes
+        if abs(dx) > 0.001 or abs(dy) > 0.001 or abs(d_yaw) > 0.001:
+            self.get_logger().info(f"Pose change: dx={dx:.4f}, dy={dy:.4f}, dyaw={d_yaw:.4f}")
+            self.get_logger().info(f"New pose: x={self.x:.3f}, y={self.y:.3f}, yaw={self.yaw:.3f}")
+
+        # Publish Odometry (same as before)
         odom_msg = Odometry()
         odom_msg.header.stamp = self.get_clock().now().to_msg()
         odom_msg.header.frame_id = "odom"
         odom_msg.child_frame_id = "base_link"
-
         odom_msg.pose.pose.position.x = self.x
         odom_msg.pose.pose.position.y = self.y
         odom_msg.pose.pose.position.z = 0.0
-
-        # Quaternion from yaw
         q = tf_transformations.quaternion_from_euler(0, 0, self.yaw)
         odom_msg.pose.pose.orientation.x = q[0]
         odom_msg.pose.pose.orientation.y = q[1]
         odom_msg.pose.pose.orientation.z = q[2]
         odom_msg.pose.pose.orientation.w = q[3]
-
         odom_msg.twist.twist.linear.x = self.vx
         odom_msg.twist.twist.linear.y = self.vy
         odom_msg.twist.twist.angular.z = self.vth
+        
+        # Lower covariance values for better EKF stability
+        odom_msg.pose.covariance = [0.01, 0, 0, 0, 0, 0,
+                                   0, 0.01, 0, 0, 0, 0,
+                                   0, 0, 1e6, 0, 0, 0,
+                                   0, 0, 0, 1e6, 0, 0,
+                                   0, 0, 0, 0, 1e6, 0,
+                                   0, 0, 0, 0, 0, 0.05]
+
+        odom_msg.twist.covariance = [0.01, 0, 0, 0, 0, 0,
+                                    0, 0.01, 0, 0, 0, 0,
+                                    0, 0, 1e6, 0, 0, 0,
+                                    0, 0, 0, 1e6, 0, 0,
+                                    0, 0, 0, 0, 1e6, 0,
+                                    0, 0, 0, 0, 0, 0.05]
 
         self.odom_pub.publish(odom_msg)
 
-        # ---------------- Broadcast TF ----------------
+        # Publish TF
         t = TransformStamped()
         t.header.stamp = self.get_clock().now().to_msg()
         t.header.frame_id = "odom"
@@ -356,7 +208,6 @@ class SensorBridge(Node):
         t.transform.rotation.w = q[3]
         self.tf_broadcaster.sendTransform(t)
 
-
 def main(args=None):
     rclpy.init(args=args)
     node = SensorBridge()
@@ -367,8 +218,5 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()
 
-
 if __name__ == '__main__':
     main()
-
-

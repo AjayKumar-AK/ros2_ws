@@ -62,18 +62,18 @@ def generate_launch_description():
         ),
         
         # RViz Node with custom config
-        #Node(
-         #   package='rviz2',
-          #  executable='rviz2',
-           # name='rviz2',
-            #output='screen',
-            #arguments=['-d', rviz_config_file] if rviz_config_file else [],
-            #parameters=[{
-             #   'use_sim_time': False
-            #}],
-            # Set initial RViz configuration via parameters
-            #remappings=[]
-        #) ,
+        Node(
+           package='rviz2',
+           executable='rviz2',
+           name='rviz2',
+           output='screen',
+           arguments=['-d', rviz_config_file] if rviz_config_file else [],
+           parameters=[{
+               'use_sim_time': False
+           }],
+           #Set initial RViz configuration via parameters
+           remappings=[]
+        ) ,
         
         
         
