@@ -1,0 +1,260 @@
+ajay@ajay-VMware-Virtual-Platform:~/ros2_ws$ ros2 topic echo /imu/data --once
+header:
+  stamp:
+    sec: 1758259824
+    nanosec: 795316787
+  frame_id: imu_link
+orientation:
+  x: 0.0
+  y: 0.0
+  z: 0.0
+  w: 1.0
+orientation_covariance:
+- -1.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+angular_velocity:
+  x: 0.00017453292519943296
+  y: -0.0
+  z: -0.0
+angular_velocity_covariance:
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+linear_acceleration:
+  x: -0.36
+  y: -0.64
+  z: -9.82
+linear_acceleration_covariance:
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+- 0.0
+---
+ajay@ajay-VMware-Virtual-Platform:~/ros2_ws$ ros2 echo wheel/odom --once
+usage: ros2 [-h] [--use-python-default-buffering] Call `ros2 <command> -h` for more detailed usage. ...
+ros2: error: argument Call `ros2 <command> -h` for more detailed usage.: invalid choice: 'echo' (choose from 'action', 'bag', 'component', 'daemon', 'doctor', 'extension_points', 'extensions', 'interface', 'launch', 'lifecycle', 'multicast', 'node', 'param', 'pkg', 'run', 'security', 'service', 'topic', 'wtf')
+ajay@ajay-VMware-Virtual-Platform:~/ros2_ws$ ros2 topic echo wheel/odom --once
+header:
+  stamp:
+    sec: 1758259846
+    nanosec: 178790321
+  frame_id: odom
+child_frame_id: base_footprint
+pose:
+  pose:
+    position:
+      x: -12.70412629465703
+      y: 22.304159725722094
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: 0.9549802229104555
+      w: -0.2966694690221707
+  covariance:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+twist:
+  twist:
+    linear:
+      x: 0.08446150634727202
+      y: 0.029966298054150384
+      z: 0.0
+    angular:
+      x: 0.0
+      y: 0.0
+      z: 0.0067014681394848095
+  covariance:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+---
+ajay@ajay-VMware-Virtual-Platform:~/ros2_ws$ ros2 topic echo /odometry/filtered --once
+header:
+  stamp:
+    sec: 1758259854
+    nanosec: 357610691
+  frame_id: odom
+child_frame_id: base_link
+pose:
+  pose:
+    position:
+      x: -12.852391409272562
+      y: 1.777050407867985
+      z: 0.0
+    orientation:
+      x: 0.0
+      y: 0.0
+      z: -0.3756453513365877
+      w: 0.9267634919542372
+  covariance:
+  - 9.99999967735138e-10
+  - 1.3831319480579826e-16
+  - 0.0
+  - 0.0
+  - 0.0
+  - -4.603418242701941e-18
+  - 1.383131948058006e-16
+  - 9.999994032252935e-10
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.99542882404629e-17
+  - 0.0
+  - 0.0
+  - 9.999999970108654e-07
+  - 1.4895818515850244e-25
+  - -5.156561974795379e-25
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.4895818515850244e-25
+  - 9.999999970108654e-07
+  - 2.5696806814276377e-35
+  - 0.0
+  - 0.0
+  - 0.0
+  - -5.156561974795378e-25
+  - 2.569680681427637e-35
+  - 9.999999970108654e-07
+  - 0.0
+  - -4.603418242702121e-18
+  - 1.995428824046334e-17
+  - 0.0
+  - 0.0
+  - 0.0
+  - 9.999993013274421e-10
+twist:
+  twist:
+    linear:
+      x: 361.06110061746335
+      y: 175.25827004469068
+      z: 0.0
+    angular:
+      x: 0.0
+      y: 0.0
+      z: 2.4444170735594685e-10
+  covariance:
+  - 0.7250341388892686
+  - -6.526860331616307e-05
+  - 0.0
+  - 0.0
+  - 0.0
+  - -7.517860537833551e-14
+  - -6.526860339258972e-05
+  - 13683.720261168046
+  - 0.0
+  - 0.0
+  - 0.0
+  - 2.6203895110920393e-12
+  - 0.0
+  - 0.0
+  - 9.999999970108654e-07
+  - 3.7239548034292237e-50
+  - -1.2891405540948651e-49
+  - 0.0
+  - 0.0
+  - 0.0
+  - 3.723954803429226e-50
+  - 9.999999970108654e-07
+  - 6.424201644583281e-60
+  - 0.0
+  - 0.0
+  - 0.0
+  - -1.2891405540948655e-49
+  - 6.42420164458328e-60
+  - 9.999999970108654e-07
+  - 0.0
+  - -7.517860537833256e-14
+  - 2.620389511092149e-12
+  - 0.0
+  - 0.0
+  - 0.0
+  - 3.345549999929748e-05
+---
+ajay@ajay-VMware-Virtual-Platform:~/ros2_ws$ 
